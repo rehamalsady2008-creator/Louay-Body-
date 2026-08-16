@@ -270,7 +270,7 @@ export default function App() {
       )}
 
       {/* 2. Header with App Avatar & Controls */}
-      <header className="w-full bg-[#0e1624] px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between border-b border-gray-800 font-sans sticky top-0 z-30 shadow-sm">
+      <header className="w-full bg-[#0e1624] pt-12 pb-3 px-4 flex justify-between items-center border-b border-gray-800">
         
         {/* 1. الجهة اليمنى: صورة التطبيق أولاً وبجانبها الاسم والعبارة مع إزاحة متناسقة لليسار */}
         <div className="flex items-center gap-3.5 sm:gap-4 text-right shrink-0">
