@@ -34,22 +34,16 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+      - name: Add Capacitor iOS Platform (Ignore Auto-Install Error)
+        run: npx cap add ios || true
 
-      - name: Fix Podfile with Explicit Project Target
+      - name: Fix Podfile Target to 14.0
         run: |
           cd ios/App
-          echo "platform :ios, '14.0'" > Podfile
-          echo "project 'App.xcodeproj'" >> Podfile
-          echo "target 'App' do" >> Podfile
-          echo "  use_frameworks!" >> Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "end" >> Podfile
+          sed -i '' "s/platform :ios, .*/platform :ios, '14.0'/" Podfile
           cd ../..
 
-      - name: Run Pod Install
+      - name: Run Pod Install Manually
         run: |
           cd ios/App
           pod install
