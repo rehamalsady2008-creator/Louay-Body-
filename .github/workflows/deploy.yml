@@ -7,6 +7,7 @@ on:
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -15,34 +16,80 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Install Capacitor CLI and Core
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+      - name: Install Capacitor
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
 
       - name: Build Web App
         run: npm run build
 
-      - name: Create Capacitor Config File
+      - name: Create Capacitor Config
         run: |
-          echo '{
+          cat > capacitor.config.json <<'EOF'
+          {
             "appId": "com.louay.app",
             "appName": "Louay App",
             "webDir": "dist",
             "bundledWebRuntime": false
-          }' > capacitor.config.json
+          }
+          EOF
 
       - name: Add Capacitor iOS Platform
-        run: npx cap add ios || true
-
-      - name: Update CocoaPods Repo and Install
         run: |
-          cd ios/App
-          pod repo update
-          pod install --repo-update
-          cd ../..
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Set iOS Deployment Target
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          podfile = Path("ios/App/Podfile")
+
+          if podfile.exists():
+              text = podfile.read_text()
+
+              if "platform :ios" in text:
+                  import re
+                  text = re.sub(
+                      r"platform :ios,.*",
+                      "platform :ios, '15.0'",
+                      text,
+                      count=1
+                  )
+              else:
+                  text = "platform :ios, '15.0'\n" + text
+
+              podfile.write_text(text)
+          PY
 
       - name: Sync Capacitor iOS
         run: npx cap sync ios
+
+      - name: Install CocoaPods
+        run: |
+          cd ios/App
+          pod install --repo-update
+
+      - name: Verify iOS Deployment Target
+        run: |
+          grep -n "platform :ios" ios/App/Podfile || true
+
+      - name: Build iOS
+        run: |
+          xcodebuild \
+            -workspace ios/App/App.xcworkspace \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            DEVELOPMENT_TEAM="" \
+            build
