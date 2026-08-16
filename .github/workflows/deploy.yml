@@ -31,7 +31,10 @@ jobs:
             "appId": "com.louay.app",
             "appName": "Louay App",
             "webDir": "dist",
-            "bundledWebRuntime": false
+            "bundledWebRuntime": false,
+            "ios": {
+              "minDeploymentTarget": "13.0"
+            }
           }' > capacitor.config.json
 
       - name: Add Capacitor iOS Platform
