@@ -25,22 +25,19 @@ jobs:
       - name: Build Web App
         run: npm run build
 
-      - name: Create Capacitor Config File with iOS Target
+      - name: Create Capacitor Config File
         run: |
           echo '{
             "appId": "com.louay.app",
             "appName": "Louay App",
             "webDir": "dist",
-            "bundledWebRuntime": false,
-            "ios": {
-              "minDeploymentTarget": "14.0"
-            }
+            "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Initialize Capacitor iOS Platform Only
-        run: npx cap add ios --deployment-target 14.0 || true
+      - name: Add Capacitor iOS Platform
+        run: npx cap add ios
 
-      - name: Force Fix Podfile Target
+      - name: Force Fix Podfile Target to 14.0
         run: |
           cd ios/App
           echo "platform :ios, '14.0'" > Podfile
@@ -51,9 +48,9 @@ jobs:
           echo "end" >> Podfile
           cd ../..
 
-      - name: Run Clean Pod Install & Sync
+      - name: Run Pod Install & Sync
         run: |
           cd ios/App
-          pod install --repo-update
+          pod install
           cd ../..
           npx cap sync ios
