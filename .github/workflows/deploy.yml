@@ -3,10 +3,11 @@ name: Build iOS App
 on:
   push:
     branches: [ main ]
+  workflow_dispatch: # يتيح لك تشغيل البناء يدوياً للتجربة
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-latest # ضروري جداً لبناء iOS
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -15,42 +16,57 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Install Capacitor CLI and Core
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
-
       - name: Build Web App
-        run: npm run build
+        run: npm run build # تأكد أن هذا الأمر ينشئ مجلد dist
 
-      - name: Create Capacitor Config File
+      - name: Create Capacitor Config
         run: |
-          echo '{
+          cat <<EOF > capacitor.config.json
+          {
             "appId": "com.louay.app",
             "appName": "Louay App",
             "webDir": "dist",
-            "bundledWebRuntime": false
-          }' > capacitor.config.json
+            "bundledWebRuntime": false,
+            "server": {
+              "androidScheme": "https"
+            }
+          }
+          EOF
 
       - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+        run: npx cap add ios || echo "Platform already exists"
 
-      - name: Force Fix Podfile Target to 14.0
+      - name: Fix Deployment Target in Podfile
         run: |
-          cd ios/App
-          echo "platform :ios, '14.0'" > Podfile
-          echo "target 'App' do" >> Podfile
-          echo "  use_frameworks!" >> Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "end" >> Podfile
-          cd ../..
+          # رفع نسخة iOS إلى 14.0 في ملف الـ Podfile لضمان التوافق
+          sed -i '' "s/platform :ios, '12.0'/platform :ios, '14.0'/g" ios/App/Podfile
+          sed -i '' "s/platform :ios, '13.0'/platform :ios, '14.0'/g" ios/App/Podfile
+          
+          # إضافة كود لتوحيد نسخة الـ Target لجميع المكتبات التابعة (ضروري جداً)
+          echo "
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+              end
+            end
+          end" >> ios/App/Podfile
 
-      - name: Run Pod Install & Sync
+      - name: Install iOS Pods
+        working-directory: ios/App
         run: |
-          cd ios/App
+          pod repo update
           pod install
-          cd ../..
-          npx cap sync ios
+
+      - name: Capacitor Sync
+        run: npx cap sync ios
+
+      - name: Verify iOS Project Build
+        working-directory: ios/App
+        run: |
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Debug -sdk iphonesimulator build | xcpretty
