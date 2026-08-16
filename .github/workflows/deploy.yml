@@ -49,5 +49,8 @@ jobs:
           echo "end" >> Podfile
           cd ../..
 
-      - name: Final Capacitor Sync
-        run: npx cap sync ios
+      - name: Run Manual Pod Install
+        run: |
+          cd ios/App
+          pod install
+          cd ../..
