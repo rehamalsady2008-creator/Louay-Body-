@@ -37,5 +37,11 @@ jobs:
       - name: Add iOS Platform
         run: npx cap add ios || true
 
-      - name: Capacitor Sync iOS
+      - name: Fix Podfile Min Deployment Target to 14.0
+        run: |
+          cd ios/App
+          sed -i '' "s/platform :ios, '13.0'/platform :ios, '14.0'/" Podfile
+          cd ../..
+
+      - name: Final Capacitor Sync
         run: npx cap sync ios
