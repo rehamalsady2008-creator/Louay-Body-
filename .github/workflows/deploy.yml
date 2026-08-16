@@ -34,10 +34,10 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Add Capacitor iOS Platform
-        run: npx cap add ios || true
+      - name: Initialize iOS Platform cleanly via Cap
+        run: npx cap sync ios
 
-      - name: Overwrite Podfile with iOS 14 Target Directly
+      - name: Force Fix Podfile Target to iOS 14.0
         run: |
           cd ios/App
           echo "platform :ios, '14.0'" > Podfile
@@ -49,12 +49,11 @@ jobs:
           echo "end" >> Podfile
           cd ../..
 
-      - name: Update CocoaPods Repo and Install
+      - name: Run Clean Pod Install
         run: |
           cd ios/App
-          pod repo update
-          pod install --repo-update
+          pod install
           cd ../..
 
-      - name: Sync Capacitor iOS
+      - name: Final Capacitor Sync
         run: npx cap sync ios
