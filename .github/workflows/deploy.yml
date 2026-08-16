@@ -1,3 +1,12 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -8,30 +17,43 @@
           node-version: '20'
 
       - name: Install dependencies
-        run: npm install # أو bun install حسب ما تستخدم
+        run: npm install
+
+      - name: Install Capacitor CLI and Core
+        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
 
       - name: Build Web App
         run: npm run build
 
-      - name: Add Capacitor iOS Platform
-        # نستخدم --no-pod-install لتجنب الفشل في أول مرة قبل تعديل الملف
-        run: npx cap add ios || true 
-
-      - name: Fix iOS Deployment Target in Podfile
+      - name: Create Capacitor Config File with iOS Target
         run: |
-          # هذا الأمر يبحث عن سطر المنصة في الـ Podfile ويغيره إلى 14.0
-          sed -i "s/platform :ios, '11.0'/platform :ios, '14.0'/g" ios/App/Podfile
-          sed -i "s/platform :ios, '12.0'/platform :ios, '14.0'/g" ios/App/Podfile
-          sed -i "s/platform :ios, '13.0'/platform :ios, '14.0'/g" ios/App/Podfile
-          # للتأكد من شمولية الحل لجميع المكتبات التابعة
-          echo "post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
-              end
-            end
-          end" >> ios/App/Podfile
+          echo '{
+            "appId": "com.louay.app",
+            "appName": "Louay App",
+            "webDir": "dist",
+            "bundledWebRuntime": false,
+            "ios": {
+              "minDeploymentTarget": "14.0"
+            }
+          }' > capacitor.config.json
 
-      - name: Run Pod Install Manually
-        working-directory: ios/App
-        run: pod install
+      - name: Initialize Capacitor iOS Platform Only
+        run: npx cap add ios --deployment-target 14.0 || true
+
+      - name: Force Fix Podfile Target
+        run: |
+          cd ios/App
+          echo "platform :ios, '14.0'" > Podfile
+          echo "target 'App' do" >> Podfile
+          echo "  use_frameworks!" >> Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
+          echo "end" >> Podfile
+          cd ../..
+
+      - name: Run Clean Pod Install & Sync
+        run: |
+          cd ios/App
+          pod install --repo-update
+          cd ../..
+          npx cap sync ios
