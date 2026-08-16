@@ -37,10 +37,16 @@ jobs:
       - name: Add iOS Platform
         run: npx cap add ios || true
 
-      - name: Fix Podfile Min Deployment Target to 14.0
+      - name: Overwrite Podfile Completely with iOS 14 Target
         run: |
           cd ios/App
-          sed -i '' "s/platform :ios, '13.0'/platform :ios, '14.0'/" Podfile
+          echo "platform :ios, '14.0'" > Podfile
+          echo "use_frameworks!" >> Podfile
+          echo "" >> Podfile
+          echo "target 'App' do" >> Podfile
+          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
+          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
+          echo "end" >> Podfile
           cd ../..
 
       - name: Final Capacitor Sync
