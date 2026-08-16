@@ -37,23 +37,5 @@ jobs:
       - name: Add iOS Platform
         run: npx cap add ios || true
 
-      - name: Overwrite Podfile with iOS 14 Target Directly
-        run: |
-          cd ios/App
-          echo "platform :ios, '14.0'" > Podfile
-          echo "use_frameworks!" >> Podfile
-          echo "" >> Podfile
-          echo "target 'App' do" >> Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "end" >> Podfile
-          cd ../..
-
-      - name: Run Clean Pod Install
-        run: |
-          cd ios/App
-          pod install
-          cd ../..
-
-      - name: Final Capacitor Sync
+      - name: Capacitor Sync iOS
         run: npx cap sync ios
