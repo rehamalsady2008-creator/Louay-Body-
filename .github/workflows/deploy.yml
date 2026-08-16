@@ -21,21 +21,35 @@ jobs:
         run: npm install
 
       - name: Build Web App
-        run: npm run build
+        run: |
+          npm run build
+          # التأكد من وجود مجلد المخرجات، إذا كان اسمه مختلفاً عن dist قم بتغييره هنا
+          mkdir -p dist 
+
+      - name: Create Capacitor Config
+        run: |
+          # هذه الخطوة إجبارية ليتمكن Capacitor من إنشاء مشروع iOS
+          cat <<EOF > capacitor.config.json
+          {
+            "appId": "com.louay.app",
+            "appName": "Louay App",
+            "webDir": "dist",
+            "bundledWebRuntime": false
+          }
+          EOF
 
       - name: Add Capacitor iOS Platform
-        # نستخدم || true لأن المنصة قد تكون موجودة بالفعل
-        run: npx cap add ios || true
+        run: |
+          # حذف المجلد القديم إذا وجد لضمان بناء نظيف
+          rm -rf ios
+          npx cap add ios
 
       - name: Smart Fix Podfile Target
         run: |
-          # 1. تعديل سطر المنصة الرئيسي في ملف الـ Podfile إلى 15.0
-          # نستخدم sed بطريقة Mac (مع علامات تنصيص فارغة) لتعديل السطر الموجود فقط
-          sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/g" ios/App/Podfile
-          
-          # 2. إضافة كود التأكيد لجميع المكتبات التابعة في نهاية الملف
-          # هذا يضمن أن كل Pod يتم تحميله سيجبر على استخدام نسخة 15.0
-          echo "
+          # التأكد من وجود الملف قبل محاولة تعديله
+          if [ -f ios/App/Podfile ]; then
+            sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/g" ios/App/Podfile
+            echo "
           post_install do |installer|
             installer.pods_project.targets.each do |target|
               target.build_configurations.each do |config|
@@ -43,6 +57,10 @@ jobs:
               end
             end
           end" >> ios/App/Podfile
+          else
+            echo "Error: Podfile not found!"
+            exit 1
+          fi
 
       - name: Run Pod Install
         working-directory: ios/App
