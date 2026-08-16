@@ -41,10 +41,10 @@ jobs:
       - name: Add Capacitor iOS Platform
         run: |
           if [ ! -d "ios" ]; then
-            npx cap add ios
+            npx cap add ios --no-sync
           fi
 
-      - name: Set iOS Deployment Target
+      - name: Fix iOS Deployment Target
         run: |
           python3 - <<'PY'
           from pathlib import Path
@@ -52,20 +52,38 @@ jobs:
 
           podfile = Path("ios/App/Podfile")
 
-          if podfile.exists():
-              text = podfile.read_text()
+          if not podfile.exists():
+              raise SystemExit("Podfile not found")
 
-              if "platform :ios" in text:
-                  text = re.sub(
-                      r"platform :ios,.*",
-                      "platform :ios, '15.0'",
-                      text,
-                      count=1
-                  )
-              else:
-                  text = "platform :ios, '15.0'\n" + text
+          text = podfile.read_text()
 
-              podfile.write_text(text)
+          # Set minimum iOS version
+          if re.search(r"platform\s*:ios", text):
+              text = re.sub(
+                  r"platform\s*:ios.*",
+                  "platform :ios, '15.0'",
+                  text,
+                  count=1
+              )
+          else:
+              text = "platform :ios, '15.0'\n" + text
+
+          # Force all CocoaPods targets to iOS 15
+          post_install = """
+          
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+              end
+            end
+          end
+          """
+
+          if "config.build_settings['IPHONEOS_DEPLOYMENT_TARGET']" not in text:
+              text += post_install
+
+          podfile.write_text(text)
           PY
 
       - name: Sync Capacitor iOS
@@ -76,9 +94,10 @@ jobs:
           cd ios/App
           pod install --repo-update
 
-      - name: Verify iOS Deployment Target
+      - name: Set Xcode Deployment Target
         run: |
-          grep -n "platform :ios" ios/App/Podfile || true
+          find ios/App -name "*.pbxproj" -type f -exec sed -i '' \
+          's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' {} \;
 
       - name: Build iOS
         run: |
@@ -90,5 +109,4 @@ jobs:
             -destination 'generic/platform=iOS' \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            DEVELOPMENT_TEAM="" \
             build
