@@ -19,8 +19,8 @@ jobs:
       - name: Install dependencies without lock file
         run: npm install --package-lock=false
 
-      - name: Install Capacitor CLI and Core
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios --package-lock=false
+      - name: Install Stable Capacitor Packages
+        run: npm install @capacitor/cli@5.7.0 @capacitor/core@5.7.0 @capacitor/ios@5.7.0 --package-lock=false
 
       - name: Build Web App
         run: npm run build
@@ -34,12 +34,13 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Add iOS Platform
-        run: npx cap add ios || true
+      - name: Add iOS Platform Cleanly
+        run: npx cap add ios
 
-      - name: Overwrite Podfile Completely with iOS 14 Target
+      - name: Create Perfect Podfile for iOS 14
         run: |
           cd ios/App
+          rm -f Podfile
           echo "platform :ios, '14.0'" > Podfile
           echo "use_frameworks!" >> Podfile
           echo "" >> Podfile
@@ -49,9 +50,8 @@ jobs:
           echo "end" >> Podfile
           cd ../..
 
-      - name: Run Manual Pod Install with Repo Update
+      - name: Run Clean Pod Install with Repo Update
         run: |
           cd ios/App
-          pod repo update
           pod install --repo-update
           cd ../..
