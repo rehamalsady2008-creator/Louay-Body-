@@ -34,13 +34,14 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Create iOS Directory Manually
-        run: mkdir -p ios/App/App
+      - name: Add Capacitor iOS Platform
+        run: npx cap add ios
 
-      - name: Create Correct Podfile Directly
+      - name: Fix Podfile with Explicit Project Target
         run: |
           cd ios/App
           echo "platform :ios, '14.0'" > Podfile
+          echo "project 'App.xcodeproj'" >> Podfile
           echo "target 'App' do" >> Podfile
           echo "  use_frameworks!" >> Podfile
           echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
