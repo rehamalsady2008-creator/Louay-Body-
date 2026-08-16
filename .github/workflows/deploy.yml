@@ -2,34 +2,63 @@ name: Build iOS App
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: macos-latest
+
     steps:
+      # 1. تحميل المشروع
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. إعداد Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
+          cache: npm
 
+      # 3. تثبيت dependencies
       - name: Install dependencies
         run: npm install
 
-      - name: Install Capacitor CLI and Core
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+      # 4. تثبيت Capacitor
+      - name: Install Capacitor
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/ios
 
+      # 5. بناء تطبيق الويب
       - name: Build Web App
         run: npm run build
 
+      # 6. إنشاء Capacitor config إذا لم يكن موجوداً
       - name: Initialize Capacitor Config
-        run: npx cap init "Louay App" "com.louay.app" --web-dir dist --force
+        run: |
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ]; then
+            npx cap init "Louay App" "com.louay.app" --web-dir dist
+          fi
 
+      # 7. إضافة iOS
       - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+        run: |
+          if [ ! -d ios ]; then
+            npx cap add ios
+          fi
 
+      # 8. مزامنة Capacitor
       - name: Sync Capacitor iOS
         run: npx cap sync ios
+
+      # 9. عرض معلومات Capacitor للتأكد
+      - name: Capacitor Doctor
+        run: npx cap doctor
+
+      # 10. حفظ مجلد iOS كـ Artifact
+      - name: Upload iOS Project
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-project
+          path: ios/
