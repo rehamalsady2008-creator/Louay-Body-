@@ -3,6 +3,7 @@ name: Build iOS App
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -19,41 +20,35 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install Capacitor CLI and Core
-        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
-
       - name: Build Web App
         run: npm run build
 
-      - name: Create Capacitor Config File
-        run: |
-          echo '{
-            "appId": "com.louay.app",
-            "appName": "Louay App",
-            "webDir": "dist",
-            "bundledWebRuntime": false
-          }' > capacitor.config.json
-
-      - name: Add Capacitor iOS Platform (Ignore Auto-Install)
+      - name: Add Capacitor iOS Platform
+        # نستخدم || true لأن المنصة قد تكون موجودة بالفعل
         run: npx cap add ios || true
 
-      - name: Overwrite Podfile with Correct iOS 14 Target
+      - name: Smart Fix Podfile Target
         run: |
-          cd ios/App
-          echo "platform :ios, '14.0'" > Podfile
-          echo "use_frameworks!" >> Podfile
-          echo "" >> Podfile
-          echo "target 'App' do" >> Podfile
-          echo "  pod 'Capacitor', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "  pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'" >> Podfile
-          echo "end" >> Podfile
-          cd ../..
+          # 1. تعديل سطر المنصة الرئيسي في ملف الـ Podfile إلى 15.0
+          # نستخدم sed بطريقة Mac (مع علامات تنصيص فارغة) لتعديل السطر الموجود فقط
+          sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/g" ios/App/Podfile
+          
+          # 2. إضافة كود التأكيد لجميع المكتبات التابعة في نهاية الملف
+          # هذا يضمن أن كل Pod يتم تحميله سيجبر على استخدام نسخة 15.0
+          echo "
+          post_install do |installer|
+            installer.pods_project.targets.each do |target|
+              target.build_configurations.each do |config|
+                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+              end
+            end
+          end" >> ios/App/Podfile
 
-      - name: Run Pod Install Manually
+      - name: Run Pod Install
+        working-directory: ios/App
         run: |
-          cd ios/App
+          pod repo update
           pod install
-          cd ../..
 
-      - name: Sync Capacitor iOS
+      - name: Capacitor Sync
         run: npx cap sync ios
