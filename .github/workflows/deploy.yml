@@ -25,6 +25,9 @@ jobs:
       - name: Build Web App
         run: npm run build
 
+      - name: Initialize Capacitor Config
+        run: npx cap init "Louay App" "com.louay.app" --web-dir dist --force
+
       - name: Add Capacitor iOS Platform
         run: npx cap add ios
 
