@@ -3,7 +3,6 @@ name: Build iOS App
 on:
   push:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
   build:
@@ -16,60 +15,34 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Install Dependencies
-        run: |
-          npm install
-          # تثبيت Capacitor CLI بشكل صريح لضمان توفر أمر 'cap'
-          npm install @capacitor/cli @capacitor/core @capacitor/ios
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Capacitor CLI and Core
+        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
 
       - name: Build Web App
-        run: |
-          npm run build
-          # إنشاء مجلد المخرجات يدوياً إذا لم يقم أمر build بإنشائه
-          mkdir -p dist
+        run: npm run build
 
-      - name: Create Capacitor Config
+      - name: Create Capacitor Config File
         run: |
-          cat <<EOF > capacitor.config.json
-          {
+          echo '{
             "appId": "com.louay.app",
             "appName": "Louay App",
             "webDir": "dist",
             "bundledWebRuntime": false
-          }
-          EOF
+          }' > capacitor.config.json
 
       - name: Add Capacitor iOS Platform
-        run: |
-          rm -rf ios
-          # استخدام npx @capacitor/cli بدلاً من npx cap لضمان العثور على المنفذ
-          npx @capacitor/cli add ios
+        run: npx cap add ios || true
 
-      - name: Smart Fix Podfile Target
+      - name: Update CocoaPods Repo and Install
         run: |
-          if [ -f ios/App/Podfile ]; then
-            # رفع نسخة iOS إلى 15.0 لضمان التوافق مع أحدث المكتبات
-            sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/g" ios/App/Podfile
-            echo "
-          post_install do |installer|
-            installer.pods_project.targets.each do |target|
-              target.build_configurations.each do |config|
-                config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
-              end
-            end
-          end" >> ios/App/Podfile
-          else
-            echo "Error: Podfile not found!"
-            exit 1
-          fi
-
-      - name: Run Pod Install
-        working-directory: ios/App
-        run: |
+          cd ios/App
           pod repo update
-          pod install
+          pod install --repo-update
+          cd ../..
 
-      - name: Capacitor Sync
-        run: npx @capacitor/cli sync ios
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
