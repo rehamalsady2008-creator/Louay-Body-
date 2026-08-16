@@ -16,19 +16,22 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install Dependencies
+        run: |
+          npm install
+          # تثبيت Capacitor CLI بشكل صريح لضمان توفر أمر 'cap'
+          npm install @capacitor/cli @capacitor/core @capacitor/ios
 
       - name: Build Web App
         run: |
           npm run build
-          # التأكد من وجود مجلد المخرجات، إذا كان اسمه مختلفاً عن dist قم بتغييره هنا
-          mkdir -p dist 
+          # إنشاء مجلد المخرجات يدوياً إذا لم يقم أمر build بإنشائه
+          mkdir -p dist
 
       - name: Create Capacitor Config
         run: |
-          # هذه الخطوة إجبارية ليتمكن Capacitor من إنشاء مشروع iOS
           cat <<EOF > capacitor.config.json
           {
             "appId": "com.louay.app",
@@ -40,14 +43,14 @@ jobs:
 
       - name: Add Capacitor iOS Platform
         run: |
-          # حذف المجلد القديم إذا وجد لضمان بناء نظيف
           rm -rf ios
-          npx cap add ios
+          # استخدام npx @capacitor/cli بدلاً من npx cap لضمان العثور على المنفذ
+          npx @capacitor/cli add ios
 
       - name: Smart Fix Podfile Target
         run: |
-          # التأكد من وجود الملف قبل محاولة تعديله
           if [ -f ios/App/Podfile ]; then
+            # رفع نسخة iOS إلى 15.0 لضمان التوافق مع أحدث المكتبات
             sed -i '' "s/platform :ios, '.*'/platform :ios, '15.0'/g" ios/App/Podfile
             echo "
           post_install do |installer|
@@ -69,4 +72,4 @@ jobs:
           pod install
 
       - name: Capacitor Sync
-        run: npx cap sync ios
+        run: npx @capacitor/cli sync ios
