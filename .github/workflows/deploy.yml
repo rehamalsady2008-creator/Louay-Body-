@@ -34,13 +34,19 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Add Capacitor iOS Platform
-        run: npx cap add ios
+      - name: Add Capacitor iOS Platform without pod install
+        run: npx cap add ios --no-pod-install
 
       - name: Fix iOS Deployment Target in Podfile
         run: |
           cd ios/App
           sed -i '' "s/platform :ios, '.*'/platform :ios, '14.0'/" Podfile
+          cd ../..
+
+      - name: Run Pod Install Manually
+        run: |
+          cd ios/App
+          pod install
           cd ../..
 
       - name: Sync Capacitor iOS
