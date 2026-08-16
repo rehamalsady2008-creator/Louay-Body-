@@ -49,8 +49,9 @@ jobs:
           echo "end" >> Podfile
           cd ../..
 
-      - name: Run Manual Pod Install
+      - name: Run Manual Pod Install with Repo Update
         run: |
           cd ios/App
-          pod install
+          pod repo update
+          pod install --repo-update
           cd ../..
