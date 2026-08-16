@@ -19,16 +19,14 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install Capacitor CLI and Core
+        run: npm install @capacitor/cli @capacitor/core @capacitor/ios
+
       - name: Build Web App
         run: npm run build
 
       - name: Add Capacitor iOS Platform
-        run: |
-          npx cap init --force
-          npx cap add ios
-          npx cap sync ios
+        run: npx cap add ios
 
-      - name: Build iOS Archive (IPA preparation)
-        run: |
-          cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -destination "generic/platform=iOS" -archivePath $PWD/build/App.xcarchive archive
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
