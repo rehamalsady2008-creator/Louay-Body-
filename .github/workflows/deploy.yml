@@ -34,10 +34,10 @@ jobs:
             "bundledWebRuntime": false
           }' > capacitor.config.json
 
-      - name: Initialize iOS Platform cleanly via Cap
-        run: npx cap sync ios
+      - name: Add iOS Platform
+        run: npx cap add ios || true
 
-      - name: Force Fix Podfile Target to iOS 14.0
+      - name: Overwrite Podfile with iOS 14 Target Directly
         run: |
           cd ios/App
           echo "platform :ios, '14.0'" > Podfile
